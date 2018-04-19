@@ -15,4 +15,21 @@ var connection = mysql.createConnection({
 connection.connect(function(err){
 	if(err) throw err;
 	console.log("Connected!");
-})
+});
+
+function startShop(){
+	inquirer.prompt([
+	{
+		name: "product",
+		type: "input",
+		message: "Please input the item's ID"
+	},
+	{
+		name: "quantity",
+		type: "input",
+		message: "How much would you like to buy?"
+	}
+	]).then(function(answer){
+		
+	})
+}
