@@ -27,6 +27,7 @@ connection.connect(function(err){
 		if(user.menu === true){
 			showInventory();
 			startShop();
+			
 		}else {
 			startShop();
 		}
@@ -48,11 +49,9 @@ function showInventory(){
 
 function startShop(){
 	connection.query("SELECT * FROM products", function(err, res){
-		if (err) throw err;
-
 		inquirer.prompt([
 	{
-		name: "item_id",
+		name: "id",
 		type: "input",
 		message: "Please input the item's ID"
 	},
@@ -62,30 +61,39 @@ function startShop(){
 		message: "How much would you like to buy?"
 	}
 	]).then(function(input){
-		var item = input.item_id;
-		var quantity = input.quantity;
-		var queryString = "SELECT * FROM products WHERE ?";
+		var query = "SELECT * FROM products WHERE ?";
 
-		connection.query(queryString, {item_id: item}, function(err, data){
-			if (err) throw err;
-			var productData = data[0];
+		connection.query(query, {item_id: input.id}, function(err, res){
+			if(res[0].stock_quantity < input.quantity){
+				console.log("Sorry we don't have enough in stock :(");
+				startShop();
+			}else{
+				var update = res[0].stock_quantity - input.quantity;
+				var query = "UPDATE products SET ? WHERE ?";
 
-			if(quantity <= productData.stock_quantity){
-			console.log("Item In Stock!");
-			var updateQuery ="UPDATE products SET stock_quantity = " + (productData.stock_quantity - quantity) + "WHERE item_id = " + item;
+				connection.query(query, [{stock_quantity: update}, {item_id: input.id}], function(err, res){
+					if(err) throw err;
+				});
 
-			connection.query(updateQuery, function(err, data){
-				if(err) throw err;
-				console.log("Your order has been placed! Your total is $" + productData.price * quantity);
-				console.log("Thank you for shopping at Bamazon!");
+				var total = res[0].price * input.quantity;
+				console.log("Thank you for your purchase! Your total is: $" + total);
 
-				connection.end();
-			})
-		} else {
-			console.log("Whoops! We don't have enough of that product in stock :( ");
-			console.log("Please select another item or change your order");
-		}
-		});
+				inquirer.prompt([
+					{
+						name: "continue",
+						type: "confirm",
+						message: "Would you like to make another purchase?"
+					}
+				]).then(function(response){
+					if(response.continue === true){
+						startShop();
+					} else{
+						console.log("--------------Thank you for shopping at Bamazon!--------------")
+						connection.end();
+					}
+				});
+			}
+		})
 	});
-	});
+});
 }
